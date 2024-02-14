@@ -1,2 +1,2 @@
-# artificial-intelligence
+# Artificial-intelligence
 NIRS
