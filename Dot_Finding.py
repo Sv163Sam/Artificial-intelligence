@@ -4,7 +4,7 @@ import mediapipe as mp
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
-cap = cv2.VideoCapture('Resources/pose2.gif')
+cap = cv2.VideoCapture('GGG/UCF101/PullUps/v_PullUps_g01_c01.avi')
 
 with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
     while cap.isOpened():
