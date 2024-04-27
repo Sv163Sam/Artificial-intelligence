@@ -10,12 +10,15 @@ pose_array = ["NOSE", "LEFT_EYE_INNER", "LEFT_EYE", "LEFT_EYE_OUTER", "RIGHT_EYE
               "RIGHT_ANKLE", "LEFT_HEEL", "RIGHT_HEEL", "LEFT_FOOT_INDEX", "RIGHT_FOOT_INDEX"]
 
 
-for i in range(95):
-    strin = "Source/" + str(i+1) + ".mp4"
-    cap = cv2.VideoCapture(strin)
+for i in range(95):  # Пробегаем по исходникам
+    iteration = 0
+    strin = "Source/" + str(i + 1) + ".mp4"
+    cap = cv2.VideoCapture(strin)  # Перадаем исходники в нейронку
+
+    filename = "Resultxt/" + str(i + 1) + ".txt"  # Задаем имя файл пропорционально исходнику
 
     with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
-        while cap.isOpened():
+        while cap.isOpened() and iteration < 40:
             ret, frame = cap.read()
             if not ret:
                 break
@@ -28,23 +31,26 @@ for i in range(95):
             image.flags.writeable = True
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-            """
-            with open(filename, 'a') as file:
-                for item in data:
-                file.write(str(item) + '\n')
-            
-            """
+            # Открывает файл на дозапись
+            # Запишем туда номер фрейма и координаты
 
-            """
-            print(results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_KNEE].x)
-            """
+            with open(filename, 'a') as file:
+                file.write("\n")
+                file.write(str(iteration + 1) + ': ')
+                for i, landmark in enumerate(results.pose_landmarks.landmark):
+                    # print(f"Landmark {mp_pose.PoseLandmark(i).name}: {landmark.x}, {landmark.y}, {landmark.z}")
+                    file.write(str(landmark.x) + ' ')
+                    file.write(str(landmark.y) + ' ')
+
+            file.close()
+            iteration = iteration + 1
+
+            # print(results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_KNEE].x)
 
             if results.pose_landmarks:
                 mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
-            """
-            cv2.imshow('Video', image)
-            """
+            # cv2.imshow('Video', image)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
