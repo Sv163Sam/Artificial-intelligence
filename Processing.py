@@ -74,6 +74,7 @@ def init_labels():
 
 
 # Обучение на тренировочной выборке и предсказание на тестовой с помощью: SVC, KNN, DecisionTree, RandomForest
+# Данные не обрабатываются предварительно, то есть описание одной видеозаписи попадает в обе выборки
 def mixed_samples_train():
     # Разделение на выборки
     x_train, x_test, y_train, y_test = train_test_split(result, labels, test_size=0.5, random_state=42)
@@ -89,10 +90,10 @@ def mixed_samples_train():
         svc_model.fit(x_train, y_train)
         return svc_model
 
-    def knn():
-        knn_model = KNeighborsClassifier(n_neighbors=5)
-        knn_model.fit(x_train, y_train)
-        return knn_model
+    def kn():
+        kn_model = KNeighborsClassifier(n_neighbors=5)
+        kn_model.fit(x_train, y_train)
+        return kn_model
 
     def df():
         df_model = DecisionTreeClassifier(max_depth=5, min_samples_leaf=10)
@@ -105,7 +106,7 @@ def mixed_samples_train():
         return rf_model
 
     model = svc()
-    # model = knn()
+    # model = kn()
     # model = df()
     # model = rf()
 
@@ -127,6 +128,8 @@ def mixed_samples_train():
         # print(f"Окно {i + 1}: Предсказание - {predicted_class}, Правильный класс - {true_class}")
 
 
+# Обучение на тренировочной выборке и предсказание на тестовой с помощью: SVC, KNN, DecisionTree, RandomForest
+# Данные обрабатываются предварительно(группируются), то есть описание одной видеозаписи принадлежит только одной из выборок
 def not_mixed_samples_train():
     # Количество групп
     n_entities = len(result) // 16
@@ -161,10 +164,10 @@ def not_mixed_samples_train():
         svc_model.fit(x_train, y_train)
         return svc_model
 
-    def knn():
-        knn_model = KNeighborsClassifier(n_neighbors=5)
-        knn_model.fit(x_train, y_train)
-        return knn_model
+    def kn():
+        kn_model = KNeighborsClassifier(n_neighbors=5)
+        kn_model.fit(x_train, y_train)
+        return kn_model
 
     def df():
         df_model = DecisionTreeClassifier(max_depth=5, min_samples_leaf=10)
@@ -177,7 +180,7 @@ def not_mixed_samples_train():
         return rf_model
 
     model = svc()
-    # model = knn()
+    # model = kn()
     # model = df()
     # model = rf()
 
