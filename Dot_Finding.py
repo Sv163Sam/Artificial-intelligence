@@ -1,56 +1,67 @@
 import cv2
 import mediapipe as mp
 
+# Параметры
+N = 89  # Количество видеозаписей
+
+# Инициализация методов библиотеки
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
-pose_array = ["NOSE", "LEFT_EYE_INNER", "LEFT_EYE", "LEFT_EYE_OUTER", "RIGHT_EYE_INNER", "RIGHT_EYE", "RIGHT_EYE_OUTER",
-              "LEFT_EAR", "RIGHT_EAR", "MOUTH_LEFT", "MOUTH_RIGHT", "LEFT_SHOULDER", "RIGHT_SHOULDER", "LEFT_ELBOW",
-              "RIGHT_ELBOW", "LEFT_WRIST", "RIGHT_WRIST", "LEFT_PINKY", "RIGHT_PINKY", "LEFT_INDEX", "RIGHT_INDEX",
-              "LEFT_THUMB", "RIGHT_THUMB", "LEFT_HIP", "RIGHT_HIP", "LEFT_KNEE", "RIGHT_KNEE", "LEFT_ANKLE",
-              "RIGHT_ANKLE", "LEFT_HEEL", "RIGHT_HEEL", "LEFT_FOOT_INDEX", "RIGHT_FOOT_INDEX"]
 
+# Определение поз
+for i in range(N):
+    # Счетчик кадров для записи в файл
+    frames = 0
 
-for i in range(95):  # Пробегаем по исходникам
-    iteration = 0
-    strin = "Source/" + str(i + 1) + ".mp4"
-    cap = cv2.VideoCapture(strin)  # Перадаем исходники в нейронку
+    # Чтение каждой видеозаписи и инициализация переменной для обработки
+    source_filename = "Source/" + str(i + 1) + ".mp4"
+    cap = cv2.VideoCapture(source_filename)
 
-    filename = "Resultxt/" + str(i + 1) + ".txt"  # Задаем имя файл пропорционально исходнику
+    # Инициализация названия файла на запись результата
+    destination_filename = "Resultxt/" + str(i + 1) + ".txt"
 
+    # Детектирование поз при помощи скелетной модели и запись в файл
     with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
-        while cap.isOpened() and iteration < 40:
+        while cap.isOpened() and frames < 40:
             ret, frame = cap.read()
+
             if not ret:
                 break
 
+            # Подготовка
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image.flags.writeable = False
 
+            # Детектирование
             results = pose.process(image)
 
+            # Обратное преобразование после использования в детектировании
             image.flags.writeable = True
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-            # Открывает файл на дозапись
-            # Запишем туда номер фрейма и координаты
+            # Запись в файл
+            with open(destination_filename, 'a') as file:
+                # Запись номера кадра в файл
+                file.write(str(frames + 1) + ': ')
 
-            with open(filename, 'a') as file:
-                file.write("\n")
-                file.write(str(iteration + 1) + ': ')
-                for i, landmark in enumerate(results.pose_landmarks.landmark):
+                # Запись координат
+                for inc, landmark in enumerate(results.pose_landmarks.landmark):
                     # print(f"Landmark {mp_pose.PoseLandmark(i).name}: {landmark.x}, {landmark.y}, {landmark.z}")
                     file.write(str(landmark.x) + ' ')
                     file.write(str(landmark.y) + ' ')
 
-            file.close()
-            iteration = iteration + 1
+                # Новая строка
+                file.write("\n")
 
-            # print(results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_KNEE].x)
+            file.close()  # Завершение работы с файлом
+            frames = frames + 1  # Инкремент кадра
 
+            """
+            print(results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_KNEE].x)
             if results.pose_landmarks:
                 mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-
-            # cv2.imshow('Video', image)
+            cv2.imshow('Video', image)
+            """
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
