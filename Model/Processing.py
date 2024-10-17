@@ -34,7 +34,7 @@ Jump = 6  # Вертикальный прыжок
 # Чтение из файлов с описанием видеозаписей в один общий массив numbers
 def read_files():
     for file_index in range(0, N):
-        filename = f'Resultxt/{file_index + 1}.txt'
+        filename = f'../Resultxt/{file_index + 1}.txt'
         with open(filename, 'r') as file:
             data = file.readlines()
         for line in data:
@@ -55,11 +55,10 @@ def print_result():
 # Создание общей матрицы, в которой хранится обработка скользящим окном по массиву numbers
 def create_res():
     for i in range(0, len(numbers) + 1 - T, S):
-        if any(30 + 40 * k < i < 40 + 40 * k for k in range(int((len(numbers) + 1 - T) / 40))):
+        if (i // 40) * 40 + 30 < i < (i // 40 + 1) * 40 + 40:
             continue
-        window_matrix = np.array(numbers[i:i + T])  # Получаем матрицу размера T * n
-        flattened_row = window_matrix.flatten()  # Развернуть матрицу в строку
-        result.append(flattened_row)  # Добавить строку в результат
+        window_matrix = np.array(numbers[i:i + T])
+        result.append(window_matrix.flatten())
 
 
 # Инициализация меток в соответствие с количеством видеозаписей
@@ -86,21 +85,25 @@ def mixed_samples_train():
 
     # Обучение
     def svc():
+        print("Модель SVC(Mixed):")
         svc_model = SVC(kernel='rbf', C=1)
         svc_model.fit(x_train, y_train)
         return svc_model
 
     def kn():
+        print("Модель KN(Mixed):")
         kn_model = KNeighborsClassifier(n_neighbors=5)
         kn_model.fit(x_train, y_train)
         return kn_model
 
     def df():
+        print("Модель DF(Mixed):")
         df_model = DecisionTreeClassifier(max_depth=5, min_samples_leaf=10)
         df_model.fit(x_train, y_train)
         return df_model
 
     def rf():
+        print("Модель RF(Mixed):")
         rf_model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
         rf_model.fit(x_train, y_train)
         return rf_model
@@ -116,8 +119,6 @@ def mixed_samples_train():
     cm = confusion_matrix(y_test, y_pred)
 
     # Вывод результатов
-    print("\nРезультаты классификации:\n")
-
     print(f'Точность: {accuracy}\n')
     print(f'Матрица путаницы:\n{cm}\n\n')
 
@@ -160,29 +161,33 @@ def not_mixed_samples_train():
 
     # Обучение
     def svc():
+        print("Модель SVC(Not mixed):")
         svc_model = SVC(kernel='rbf', C=1)
         svc_model.fit(x_train, y_train)
         return svc_model
 
     def kn():
+        print("Модель KN(Not mixed):")
         kn_model = KNeighborsClassifier(n_neighbors=5)
         kn_model.fit(x_train, y_train)
         return kn_model
 
     def df():
+        print("Модель DF(Not mixed):")
         df_model = DecisionTreeClassifier(max_depth=5, min_samples_leaf=10)
         df_model.fit(x_train, y_train)
         return df_model
 
     def rf():
+        print("Модель RF(Not mixed):")
         rf_model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
         rf_model.fit(x_train, y_train)
         return rf_model
 
-    model = svc()
+    # model = svc()
     # model = kn()
     # model = df()
-    # model = rf()
+    model = rf()
 
     # Предсказание
     y_pred = model.predict(x_test)
@@ -190,8 +195,6 @@ def not_mixed_samples_train():
     cm = confusion_matrix(y_test, y_pred)
 
     # Вывод результатов
-    print("\nРезультаты классификации:\n")
-
     print(f'Точность: {accuracy}\n')
     print(f'Матрица путаницы:\n{cm}\n\n')
 
@@ -206,5 +209,5 @@ def not_mixed_samples_train():
 read_files()
 create_res()
 init_labels()
-# mixed_samples_train()
+mixed_samples_train()
 # not_mixed_samples_train()

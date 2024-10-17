@@ -14,11 +14,11 @@ for i in range(N):
     frames = 0
 
     # Чтение каждой видеозаписи и инициализация переменной для обработки
-    source_filename = "Source/" + str(i + 1) + ".mp4"
+    source_filename = "../Source/" + str(i + 1) + ".mp4"
     cap = cv2.VideoCapture(source_filename)
 
     # Инициализация названия файла на запись результата
-    destination_filename = "Resultxt/" + str(i + 1) + ".txt"
+    destination_filename = "../Poses/" + str(i + 1) + ".txt"
 
     # Детектирование поз при помощи скелетной модели и запись в файл
     with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
