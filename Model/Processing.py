@@ -13,6 +13,7 @@ N = 89  # Количество файлов
 T = 10  # Размер окна
 S = 2  # Шаг окна
 
+
 # Расчет новых координат
 def translate_coordinates_to_centers(input_folder_poses, input_folder_centers, output_folder):
     # Убедимся, что выходная папка существует
