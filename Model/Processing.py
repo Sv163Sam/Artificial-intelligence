@@ -6,11 +6,50 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+import os
 
 # Параметры
 N = 89  # Количество файлов
 T = 10  # Размер окна
 S = 2  # Шаг окна
+
+# Расчет новых координат
+def translate_coordinates_to_centers(input_folder_poses, input_folder_centers, output_folder):
+    # Убедимся, что выходная папка существует
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Проходим по всем файлам в папке Poses
+    for i in range(1, N + 1):  # Замените N на количество файлов
+        input_filename = os.path.join(input_folder_poses, f"{i}.txt")
+        center_filename = os.path.join(input_folder_centers, f"{i}.txt")
+        output_filename = os.path.join(output_folder, f"{i}.txt")
+
+        with open(input_filename, 'r') as infile, open(center_filename, 'r') as centerfile, open(output_filename,
+                                                                                                 'w') as outfile:
+            # Читаем центр масс
+            center_lines = centerfile.readlines()
+            centers = [list(map(float, line.split(':')[1].strip().split(', '))) for line in center_lines]
+
+            # Обрабатываем каждую строку с позами
+            for line_number, line in enumerate(infile, 1):
+                # Разделяем строку на числа
+                numbers = list(map(float, line.split()[1:]))  # Отбрасываем номер строки
+
+                # Получаем центр масс для текущего кадра
+                center_x, center_y = centers[line_number - 1]
+
+                # Вычисляем новые координаты
+                translated_coordinates = []
+                for j in range(0, len(numbers), 2):
+                    x = numbers[j] - center_x
+                    y = numbers[j + 1] - center_y
+                    translated_coordinates.append((x, y))
+
+                # Записываем результат в новый файл
+                outfile.write(f"{line_number}: ")
+                outfile.write(' '.join(f"{x:.4f} {y:.4f}" for x, y in translated_coordinates))
+                outfile.write("\n")
+
 
 # Контейнеры
 numbers = []  # Для чтения из файла
@@ -34,7 +73,7 @@ Jump = 6  # Вертикальный прыжок
 # Чтение из файлов с описанием видеозаписей в один общий массив numbers
 def read_files():
     for file_index in range(0, N):
-        filename = f'../Resultxt/{file_index + 1}.txt'
+        filename = f'../Translated_Centers/{file_index + 1}.txt'
         with open(filename, 'r') as file:
             data = file.readlines()
         for line in data:
@@ -75,12 +114,14 @@ def init_labels():
 # Обучение на тренировочной выборке и предсказание на тестовой с помощью: SVC, KNN, DecisionTree, RandomForest
 # Данные не обрабатываются предварительно, то есть описание одной видеозаписи попадает в обе выборки
 def mixed_samples_train():
+    scaler = StandardScaler()
+    scaler.fit(result)
+
     # Разделение на выборки
     x_train, x_test, y_train, y_test = train_test_split(result, labels, test_size=0.5, random_state=42)
 
     # Перемешивание
-    scaler = StandardScaler()
-    x_train = scaler.fit_transform(x_train)
+    x_train = scaler.transform(x_train)
     x_test = scaler.transform(x_test)
 
     # Обучение
@@ -184,10 +225,10 @@ def not_mixed_samples_train():
         rf_model.fit(x_train, y_train)
         return rf_model
 
-    # model = svc()
+    model = svc()
     # model = kn()
     # model = df()
-    model = rf()
+    # model = rf()
 
     # Предсказание
     y_pred = model.predict(x_test)
@@ -206,8 +247,9 @@ def not_mixed_samples_train():
 
 
 # Вызовы
+translate_coordinates_to_centers("../Poses", "../Centrs", "../Translated_Centers")
 read_files()
 create_res()
 init_labels()
-mixed_samples_train()
-# not_mixed_samples_train()
+# mixed_samples_train()
+not_mixed_samples_train()
