@@ -1,70 +1,67 @@
 import cv2
 import mediapipe as mp
 
-# Параметры
-N = 89  # Количество видеозаписей
 
-# Инициализация методов библиотеки
-mp_drawing = mp.solutions.drawing_utils
-mp_pose = mp.solutions.pose
+def pose_detection(video_base_size: int, frames_count: int = 40) -> None:
+    """
+    Определяет координаты ключевых точек на видеофрагменте
 
-# Определение поз
-for i in range(N):
-    # Счетчик кадров для записи в файл
-    frames = 0
+    Args:
+        video_base_size (int): Количество видеозаписей в директории.
+        frames_count (int): Количество обрабатываемых кадров в видеофрагменте
+    Returns:
+        None.
+    """
 
-    # Чтение каждой видеозаписи и инициализация переменной для обработки
-    source_filename = "../Source/" + str(i + 1) + ".mp4"
-    cap = cv2.VideoCapture(source_filename)
+    # Инициализация методов библиотеки
+    mp_drawing = mp.solutions.drawing_utils
+    mp_pose = mp.solutions.pose
 
-    # Инициализация названия файла на запись результата
-    destination_filename = "../Poses/" + str(i + 1) + ".txt"
+    # Определение поз
+    for i in range(video_base_size):
+        frames = 0   # Счетчик кадров для записи в файл
 
-    # Детектирование поз при помощи скелетной модели и запись в файл
-    with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
-        while cap.isOpened() and frames < 40:
-            ret, frame = cap.read()
+        # Чтение каждой видеозаписи и инициализация переменной для обработки
+        source_filename = "../Processing_files/Source/" + str(i + 1) + ".mp4"
+        # Инициализация названия файла на запись результата
+        destination_filename = "../Processing_files/Poses/" + str(i + 1) + ".txt"
 
-            if not ret:
-                break
+        cap = cv2.VideoCapture(source_filename)
 
-            # Подготовка
-            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            image.flags.writeable = False
+        # Детектирование поз при помощи скелетной модели и запись в файл
+        with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
+            while cap.isOpened() and frames < frames_count:
+                ret, frame = cap.read()
+                if not ret:
+                    break
 
-            # Детектирование
-            results = pose.process(image)
+                # Подготовка
+                image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                image.flags.writeable = False
 
-            # Обратное преобразование после использования в детектировании
-            image.flags.writeable = True
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                # Детектирование
+                results = pose.process(image)
 
-            # Запись в файл
-            with open(destination_filename, 'a') as file:
-                # Запись номера кадра в файл
-                file.write(str(frames + 1) + ': ')
+                # Обратное преобразование после использования в детектировании
+                image.flags.writeable = True
+                cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-                # Запись координат
-                for inc, landmark in enumerate(results.pose_landmarks.landmark):
-                    # print(f"Landmark {mp_pose.PoseLandmark(i).name}: {landmark.x}, {landmark.y}, {landmark.z}")
-                    file.write(str(landmark.x) + ' ')
-                    file.write(str(landmark.y) + ' ')
+                # Запись в файл
+                with open(destination_filename, 'a') as file:
+                    file.write(str(frames + 1) + ': ')  # Запись номера кадра в файл
 
-                # Новая строка
-                file.write("\n")
+                    # Запись координат
+                    for inc, landmark in enumerate(results.pose_landmarks.landmark):
+                        file.write(str(landmark.x) + ' ')
+                        file.write(str(landmark.y) + ' ')
 
-            file.close()  # Завершение работы с файлом
-            frames = frames + 1  # Инкремент кадра
+                    file.write("\n")  # Новая строка
 
-            """
-            print(results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_KNEE].x)
-            if results.pose_landmarks:
-                mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-            cv2.imshow('Video', image)
-            """
+                file.close()  # Завершение работы с файлом
+                frames = frames + 1  # Инкремент кадра
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
 
-cap.release()
-cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()

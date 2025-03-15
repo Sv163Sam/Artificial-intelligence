@@ -8,118 +8,43 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 import os
 
-# Параметры
-N = 89  # Количество файлов
-T = 10  # Размер окна
-S = 2  # Шаг окна
-
-
-# Расчет новых координат
-def translate_coordinates_to_centers(input_folder_poses, input_folder_centers, output_folder):
-    # Убедимся, что выходная папка существует
-    os.makedirs(output_folder, exist_ok=True)
-
-    # Проходим по всем файлам в папке Poses
-    for i in range(1, N + 1):  # Замените N на количество файлов
-        input_filename = os.path.join(input_folder_poses, f"{i}.txt")
-        center_filename = os.path.join(input_folder_centers, f"{i}.txt")
-        output_filename = os.path.join(output_folder, f"{i}.txt")
-
-        with open(input_filename, 'r') as infile, open(center_filename, 'r') as centerfile, open(output_filename,
-                                                                                                 'w') as outfile:
-            # Читаем центр масс
-            center_lines = centerfile.readlines()
-            centers = [list(map(float, line.split(':')[1].strip().split(', '))) for line in center_lines]
-
-            # Обрабатываем каждую строку с позами
-            for line_number, line in enumerate(infile, 1):
-                # Разделяем строку на числа
-                numbers = list(map(float, line.split()[1:]))  # Отбрасываем номер строки
-
-                # Получаем центр масс для текущего кадра
-                center_x, center_y = centers[line_number - 1]
-
-                # Вычисляем новые координаты
-                translated_coordinates = []
-                for j in range(0, len(numbers), 2):
-                    x = numbers[j] - center_x
-                    y = numbers[j + 1] - center_y
-                    translated_coordinates.append((x, y))
-
-                # Записываем результат в новый файл
-                outfile.write(f"{line_number}: ")
-                outfile.write(' '.join(f"{x:.4f} {y:.4f}" for x, y in translated_coordinates))
-                outfile.write("\n")
-
-
-# Контейнеры
-numbers = []  # Для чтения из файла
-result = []  # Результирующая матрица, в которой хранится каждый проход окно в виде строки: list[array1, array2, ...]
-
-# Метки
-labels = np.zeros(1424, dtype=int)  # Вектор меток для обучения
-class_names = ["Бег(боковая проекция)", "Присяд", "Выпады", "Наклон туловища", "Ходьба(фронтальная проекция)",
-               "Ходьба(боковая проекция)", "Вертикальный прыжок"]  # Названия меток для вывода
-
-# Индексы меток
-Run_side = 0  # Бег(боковая проекция)
-Sitdown = 1  # Присяд
-Lunges = 2  # Выпады
-Torso_tilt = 3  # Наклон туловища
-Walk_front = 4  # Ходьба(фронтальная проекция)
-Walk_side = 5  # Ходьба(боковая проекция)
-Jump = 6  # Вертикальный прыжок
-
 
 # Чтение из файлов с описанием видеозаписей в один общий массив numbers
-def read_files():
-    for file_index in range(0, N):
-        filename = f'../Translated_Centers/{file_index + 1}.txt'
+def read_files(video_base_size: int) -> list[list[float]]:
+    file_values = []
+
+    for file_index in range(0, video_base_size):
+        filename = f'Processing_files/Translated_Centers/{file_index + 1}.txt'
+
         with open(filename, 'r') as file:
             data = file.readlines()
         for line in data:
-            numbers.append([float(num) for num in line.split()[1:]])
+            file_values.append([float(num) for num in line.split()[1:]])
 
-
-# Вывести массив numbers
-def print_numbers():
-    for line in numbers:
-        print(line)
-
-
-# Вывести массив result
-def print_result():
-    print(result)
+    return file_values
 
 
 # Создание общей матрицы, в которой хранится обработка скользящим окном по массиву numbers
-def create_res():
-    for i in range(0, len(numbers) + 1 - T, S):
+def window_processing(file_values: list, window_size: int = 10, window_step: int = 2) -> list[np.array]:
+    result = []
+    for i in range(0, len(file_values) + 1 - window_size, window_step):
         if (i // 40) * 40 + 30 < i < (i // 40 + 1) * 40 + 40:
             continue
-        window_matrix = np.array(numbers[i:i + T])
+
+        window_matrix = np.array(file_values[i:i + window_size])
         result.append(window_matrix.flatten())
 
-
-# Инициализация меток в соответствие с количеством видеозаписей
-def init_labels():
-    labels[0:160] = Run_side
-    labels[160:320] = Sitdown
-    labels[320:480] = Lunges
-    labels[480:640] = Torso_tilt
-    labels[640:960] = Walk_front
-    labels[960:1120] = Walk_side
-    labels[1120:] = Jump
+    return result
 
 
 # Обучение на тренировочной выборке и предсказание на тестовой с помощью: SVC, KNN, DecisionTree, RandomForest
 # Данные не обрабатываются предварительно, то есть описание одной видеозаписи попадает в обе выборки
-def mixed_samples_train():
+def mixed_samples_train(window_processed_data: list[np.array], labels: np.array, labels_names: list[str], classifier_type: str):
     scaler = StandardScaler()
-    scaler.fit(result)
+    scaler.fit(window_processed_data)
 
     # Разделение на выборки
-    x_train, x_test, y_train, y_test = train_test_split(result, labels, test_size=0.5, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(window_processed_data, labels, test_size=0.5, random_state=42)
 
     # Перемешивание
     x_train = scaler.transform(x_train)
@@ -127,33 +52,38 @@ def mixed_samples_train():
 
     # Обучение
     def svc():
-        print("Модель SVC(Mixed):")
+        print("Модель SVC без предварительной обработки")
         svc_model = SVC(kernel='rbf', C=1)
         svc_model.fit(x_train, y_train)
         return svc_model
 
-    def kn():
-        print("Модель KN(Mixed):")
+    def knn():
+        print("Модель KNN без предварительной обработки")
         kn_model = KNeighborsClassifier(n_neighbors=5)
         kn_model.fit(x_train, y_train)
         return kn_model
 
-    def df():
-        print("Модель DF(Mixed):")
+    def decision_tree():
+        print("Модель DecisionTree без предварительной обработки")
         df_model = DecisionTreeClassifier(max_depth=5, min_samples_leaf=10)
         df_model.fit(x_train, y_train)
         return df_model
 
-    def rf():
-        print("Модель RF(Mixed):")
+    def random_forest():
+        print("Модель RandomForest без предварительной обработки")
         rf_model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
         rf_model.fit(x_train, y_train)
         return rf_model
 
-    model = svc()
-    # model = kn()
-    # model = df()
-    # model = rf()
+    model = None
+    if classifier_type == "SVC":
+        model = svc()
+    if classifier_type == "KNN":
+        model = knn()
+    if classifier_type == "DecisionTree":
+        model = decision_tree()
+    if classifier_type == "RandomForest":
+        model = random_forest()
 
     # Предсказание
     y_pred = model.predict(x_test)
@@ -165,20 +95,20 @@ def mixed_samples_train():
     print(f'Матрица путаницы:\n{cm}\n\n')
 
     for i in range(len(x_test)):
-        predicted_class = class_names[y_pred[i]]
-        true_class = class_names[y_test[i]]
+        predicted_class = labels_names[y_pred[i]]
+        true_class = labels_names[y_test[i]]
 
         # print(f"Окно {i + 1}: Предсказание - {predicted_class}, Правильный класс - {true_class}")
 
 
 # Обучение на тренировочной выборке и предсказание на тестовой с помощью: SVC, KNN, DecisionTree, RandomForest
 # Данные обрабатываются предварительно(группируются), то есть описание одной видеозаписи принадлежит только одной из выборок
-def not_mixed_samples_train():
+def not_mixed_samples_train(window_processed_data: list[np.array], labels: np.array, labels_names: list[str], classifier_type: str):
     # Количество групп
-    n_entities = len(result) // 16
+    n_entities = len(window_processed_data) // 16
 
     # Группировка
-    grouped_result = [result[i * 16:(i + 1) * 16] for i in range(n_entities)]
+    grouped_result = [window_processed_data[i * 16:(i + 1) * 16] for i in range(n_entities)]
     grouped_labels = [labels[i * 16:(i + 1) * 16] for i in range(n_entities)]
 
     # Разделение на обучающую и тестовую выборки
@@ -203,33 +133,38 @@ def not_mixed_samples_train():
 
     # Обучение
     def svc():
-        print("Модель SVC(Not mixed):")
+        print("Модель SVC с предварительной обработкой")
         svc_model = SVC(kernel='rbf', C=1)
         svc_model.fit(x_train, y_train)
         return svc_model
 
-    def kn():
-        print("Модель KN(Not mixed):")
+    def knn():
+        print("Модель KNN с предварительной обработкой")
         kn_model = KNeighborsClassifier(n_neighbors=5)
         kn_model.fit(x_train, y_train)
         return kn_model
 
-    def df():
-        print("Модель DF(Not mixed):")
+    def decision_tree():
+        print("Модель DecisionTree с предварительной обработкой")
         df_model = DecisionTreeClassifier(max_depth=5, min_samples_leaf=10)
         df_model.fit(x_train, y_train)
         return df_model
 
-    def rf():
-        print("Модель RF(Not mixed):")
+    def random_forest():
+        print("Модель RandomForest с предварительной обработкой")
         rf_model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
         rf_model.fit(x_train, y_train)
         return rf_model
 
-    model = svc()
-    # model = kn()
-    # model = df()
-    # model = rf()
+    model = None
+    if classifier_type == "SVC":
+        model = svc()
+    if classifier_type == "KNN":
+        model = knn()
+    if classifier_type == "DecisionTree":
+        model = decision_tree()
+    if classifier_type == "RandomForest":
+        model = random_forest()
 
     # Предсказание
     y_pred = model.predict(x_test)
@@ -241,16 +176,8 @@ def not_mixed_samples_train():
     print(f'Матрица путаницы:\n{cm}\n\n')
 
     for i in range(len(x_test)):
-        predicted_class = class_names[y_pred[i]]
-        true_class = class_names[y_test[i]]
+        predicted_class = labels_names[y_pred[i]]
+        true_class = labels_names[y_test[i]]
 
         # print(f"Строка {i + 1}: Предсказание - {predicted_class}, Правильный класс - {true_class}")
 
-
-# Вызовы
-translate_coordinates_to_centers("../Poses", "../Centrs", "../Translated_Centers")
-read_files()
-create_res()
-init_labels()
-# mixed_samples_train()
-not_mixed_samples_train()
