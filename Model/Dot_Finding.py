@@ -12,7 +12,6 @@ def pose_detection(video_base_size: int, frames_count: int = 40) -> None:
     Returns:
         None.
     """
-
     # Инициализация методов библиотеки
     mp_drawing = mp.solutions.drawing_utils
     mp_pose = mp.solutions.pose

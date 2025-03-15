@@ -11,6 +11,14 @@ import os
 
 # Чтение из файлов с описанием видеозаписей в один общий массив numbers
 def read_files(video_base_size: int) -> list[list[float]]:
+    """
+    Читает построчно файл + парсит номера строка
+
+    Args:
+        video_base_size (int): Размер базы данных с видеозаписями.
+    Returns:
+        list[list[float]] - Сформированная матрица из всех файлов (последовательно).
+    """
     file_values = []
 
     for file_index in range(0, video_base_size):
@@ -26,6 +34,16 @@ def read_files(video_base_size: int) -> list[list[float]]:
 
 # Создание общей матрицы, в которой хранится обработка скользящим окном по массиву numbers
 def window_processing(file_values: list, window_size: int = 10, window_step: int = 2) -> list[np.array]:
+    """
+    Обработка скользящим окном
+
+    Args:
+        file_values (list): Сформированная матрица из файлов.
+        window_size (int): Размер окна.
+        window_step (int): Шаг окна.
+    Returns:
+        list[np.array] - Сформированная матрица в результате обработки скользящим окном.
+    """
     result = []
     for i in range(0, len(file_values) + 1 - window_size, window_step):
         if (i // 40) * 40 + 30 < i < (i // 40 + 1) * 40 + 40:
@@ -40,6 +58,17 @@ def window_processing(file_values: list, window_size: int = 10, window_step: int
 # Обучение на тренировочной выборке и предсказание на тестовой с помощью: SVC, KNN, DecisionTree, RandomForest
 # Данные не обрабатываются предварительно, то есть описание одной видеозаписи попадает в обе выборки
 def mixed_samples_train(window_processed_data: list[np.array], labels: np.array, labels_names: list[str], classifier_type: str):
+    """
+    Классификация на выборках без предварительной обработки.
+
+    Args:
+        window_processed_data (list[np.array]): Сформированная в результате обработки скользящим окном матрица.
+        labels (np.array): Массив меток.
+        labels_names (list[str): Расшифровка меток.
+        classifier_type (str): Тип классификатора.
+    Returns:
+        None.
+    """
     scaler = StandardScaler()
     scaler.fit(window_processed_data)
 
@@ -104,6 +133,17 @@ def mixed_samples_train(window_processed_data: list[np.array], labels: np.array,
 # Обучение на тренировочной выборке и предсказание на тестовой с помощью: SVC, KNN, DecisionTree, RandomForest
 # Данные обрабатываются предварительно(группируются), то есть описание одной видеозаписи принадлежит только одной из выборок
 def not_mixed_samples_train(window_processed_data: list[np.array], labels: np.array, labels_names: list[str], classifier_type: str):
+    """
+    Классификация на выборках с предварительной обработкой.
+
+    Args:
+        window_processed_data (list[np.array]): Сформированная в результате обработки скользящим окном матрица.
+        labels (np.array): Массив меток.
+        labels_names (list[str): Расшифровка меток.
+        classifier_type (str): Тип классификатора.
+    Returns:
+        None.
+    """
     # Количество групп
     n_entities = len(window_processed_data) // 16
 
