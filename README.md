@@ -1,6 +1,6 @@
 # Artificial-intelligence
 NIRS
-![Pose.png](Project_media/Pose.png)
+![Pose.png](Pose.png)
 
 Интервалы видеофрагментов:
 -	[1, 10] – Бег(боковая проекция)
