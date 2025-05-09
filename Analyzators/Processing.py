@@ -7,8 +7,6 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# N / 2 + 1
 
 
 # Чтение из файлов с описанием видеозаписей в один общий массив numbers
@@ -39,33 +37,32 @@ def read_files(video_base_size: int, source_path: str) -> list[list[float]]:
 # Создание общей матрицы, в которой хранится обработка скользящим окном по массиву numbers
 def window_processing(file_values: list, count_frames_in_files: list[int], window_size: int = 10, window_step: int = 2) -> list[np.array]:
     """
-    Обработка скользящим окном
+    Обработка скользящим окном по видеоматериалам, без пересечения границ видео.
 
     Args:
-        file_values (list): Сформированная матрица из файлов.
-        count_frames_in_files (list[int]): Количество кадров в каждом видеофрагменте.
+        file_values (list): Выровненная матрица из кадров всех видео.
+        count_frames_in_files (list[int]): Количество кадров в каждом видеоролике.
         window_size (int): Размер окна.
         window_step (int): Шаг окна.
+
     Returns:
-        list[np.array] - Сформированная матрица в результате обработки скользящим окном.
+        list[np.array]: Обработанные окна, каждый — в виде массива.
     """
     result = []
-    processing_counter = 0
-    current_video_counter = count_frames_in_files[processing_counter]
-    current_video_processing_flag = False
+    start_idx = 0  # Начальный индекс для текущего видео
 
-    for i in range(0, len(file_values) + 1 - window_size, window_step):
-        if current_video_counter < i < current_video_counter + window_size / window_step:
-            current_video_processing_flag = True
+    for frames_count in count_frames_in_files:
+        max_start = frames_count - window_size
+        if max_start < 0:
+            # Размер окна больше длины видео, пропускаем
+            start_idx += frames_count
             continue
 
-        if current_video_processing_flag:
-            processing_counter += 1
-            current_video_processing_flag = False
-            current_video_counter = count_frames_in_files[processing_counter]
+        for start in range(start_idx, start_idx + max_start + 1, window_step):
+            window_data = file_values[start: start + window_size]
+            result.append(np.array(window_data).flatten())
 
-        window_matrix = np.array(file_values[i:i + window_size])
-        result.append(window_matrix.flatten())
+        start_idx += frames_count
 
     return result
 
@@ -95,7 +92,7 @@ def mixed_samples_train(window_processed_data: list[np.array], labels: np.array,
     model = None
     if classifier_type == "SVC":
         print("Модель SVC без предварительной обработки")
-        model = SVC(kernel='rbf', C=1, gamma='scale')
+        model = SVC(kernel='leaf10', C=1, gamma='scale')
     elif classifier_type == "KNN":
         print("Модель KNN без предварительной обработки")
         model = KNeighborsClassifier(n_neighbors=5)
@@ -185,17 +182,17 @@ def not_mixed_samples_train(window_processed_data: list[np.array], labels: np.ar
     # Обучение модели
     model = None
     if classifier_type == "SVC":
-        print("Модель SVC с предварительной обработкой")
-        model = SVC(kernel='rbf', C=1, gamma='scale')
+        # print("Модель SVC с предварительной обработкой")
+        model = SVC(kernel='sigmoid', C=1, gamma="auto", class_weight=None)
     elif classifier_type == "KNN":
-        print("Модель KNN с предварительной обработкой")
-        model = KNeighborsClassifier(n_neighbors=5)
+        # print("Модель KNN с предварительной обработкой")
+        model = KNeighborsClassifier(n_neighbors=7)
     elif classifier_type == "DecisionTree":
-        print("Модель DecisionTree с предварительной обработкой")
-        model = DecisionTreeClassifier(max_depth=None, min_samples_leaf=1)
+        # print("Модель DecisionTree с предварительной обработкой")
+        model = DecisionTreeClassifier(max_depth=None, min_samples_leaf=10)
     elif classifier_type == "RandomForest":
-        print("Модель RandomForest с предварительной обработкой")
-        model = RandomForestClassifier(n_estimators=100, max_depth=None, random_state=42)
+        # print("Модель RandomForest с предварительной обработкой")
+        model = RandomForestClassifier(n_estimators=150, max_depth=None, random_state=42)
     else:
         raise ValueError(f"Неподдерживаемый тип классификатора: {classifier_type}")
 
@@ -207,12 +204,14 @@ def not_mixed_samples_train(window_processed_data: list[np.array], labels: np.ar
     cm = confusion_matrix(y_test, y_pred)
 
     # Вывод результатов
-    print(f'Точность: {accuracy}\n')
-    print(f'Матрица путаницы:\n{cm}\n\n')
+    # print(f'Точность: {accuracy}\n')
+
+    formatted = f"{accuracy:.6f}".replace('.', ',')
+    print(formatted)
+    #print(f'Матрица путаницы:\n{cm}\n\n')
 
     for i in range(len(x_test)):
         predicted_class = labels_names[y_pred[i]]
         true_class = labels_names[y_test[i]]
 
         # print(f"Строка {i + 1}: Предсказание - {predicted_class}, Правильный класс - {true_class}")
-

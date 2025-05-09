@@ -5,7 +5,7 @@ from Utils.Project_utils import *
 
 
 import os
-
+# int((N - WINDOW_SIZE) / WINDOW_STEP)) + 1
 
 if __name__ == "__main__":
     print("РАСПОЗНАВАНИЕ ДЕЙСТВИЙ ЧЕЛОВЕКА В ОХРАНЯЕМОЙ ЗОНЕ\n")
@@ -34,10 +34,14 @@ if __name__ == "__main__":
                 find_centers(source_filename, output_filename)
             continue
         if user_input == "3":
+            WINDOW_SIZE = 20
+            WINDOW_STEP = 10
+
             count_frames_in_files = count_frames(video_base_size, RESULT_POSES_PATH)
 
             # Вызовы
-            print(f"Вызов функции translate_coordinates_to_centers с параметрами: размер базы данных видеозаписей - {video_base_size}")
+            print(
+                f"Вызов функции translate_coordinates_to_centers с параметрами: размер базы данных видеозаписей - {video_base_size}")
             translate_coordinates_to_centers(RESULT_POSES_PATH, RESULT_CENTERS_PATH, RESULT_TRANSLATED_CENTERS_PATH,
                                              video_base_size)
 
@@ -47,11 +51,44 @@ if __name__ == "__main__":
 
             # Результирующая матрица, в которой хранится каждый проход окно в виде строки: list[array1, array2, ...]
             print(f"Вызов функции window_processing с параметрами: размер окна - 10, шаг окна - 2")
-            window_processed_data = window_processing(translated_centers_values, count_frames_in_files, 10, 2)
+            window_processed_data = window_processing(translated_centers_values, count_frames_in_files, WINDOW_SIZE,
+                                                      WINDOW_STEP)
 
             # Метки
             labels = np.zeros(len(window_processed_data), dtype=int)
 
+            labels_names = [
+                "Бег", "Присяд", "Выпады", "Наклоны",
+                "Ходьба", "Прыжки", "Пройти через турникет", "Перешагнуть через ограждение",
+                "Пролезть сквозь ограждение", "Кинуть предмет", "Бросить сумку",
+                "Постучать и заглянуть", "Постучать и зайти"
+            ]
+
+            ranges_classes = [
+                (0, 29, 0),
+                (29, 39, 1),
+                (39, 49, 2),
+                (49, 59, 3),
+                (59, 109, 4),
+                (109, 129, 5),
+                (129, 149, 6),
+                (149, 169, 7),
+                (169, 190, 8),
+                (190, 208, 9),
+                (208, 223, 10),
+                (223, 228, 11),
+                (228, 236, 12)
+            ]
+
+            start_index = 0
+
+            for start_file, end_file, class_label in ranges_classes:
+                for idx in range(start_file, end_file):
+                    length = int((count_frames_in_files[idx] - WINDOW_SIZE) / WINDOW_STEP) + 1
+                    labels[start_index: start_index + length] = class_label
+                    start_index += length
+
+            """
             # Вектор меток для обучения
             labels_names = ["Ходьба", "Бег", "Пройти через турникет", "Перешагнуть через ограждение",
                             "Пролезть сквозь ограждение", "Кинуть предмет", "Бросить сумку", "Постучать и заглянуть",
@@ -87,6 +124,7 @@ if __name__ == "__main__":
             for i in range(141, 159):
                 labels[start_index: start_index + int(count_frames_in_files[i] / 2) + 1] = 8
                 start_index += int(count_frames_in_files[i] / 2) + 1
+            """
 
             while True:
                 print("Выберите тип классификации:"
